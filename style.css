@@ -1,0 +1,693 @@
+/* ==============================================================================
+   [오이 머니 플래닛] 초등학교 학급 경제 스톡&뱅킹 플랫폼
+   순수 CSS 스타일시트 (style.css) - 프레임워크 없는 독립형 웹
+   ============================================================================== */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+:root {
+  --primary: #059669;
+  --primary-dark: #047857;
+  --primary-light: #10b981;
+  --secondary: #0d9488;
+  --accent: #f59e0b;
+  --accent-dark: #d97706;
+  --danger: #e11d48;
+  --info: #2563eb;
+  --bg-main: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 상단 헤더 (날짜 미표시 요구사항 준수) */
+.app-header {
+  background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+  color: #ffffff;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  gap: 0.75rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  font-size: 1.85rem;
+  background: rgba(255, 255, 255, 0.2);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.brand-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-badge {
+  font-size: 0.65rem;
+  background: rgba(4, 120, 87, 0.85);
+  color: #ecfdf5;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  font-weight: 700;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.brand-title h1 {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+/* 중앙 학생 프로필 */
+.header-profile {
+  background: rgba(4, 120, 87, 0.65);
+  padding: 0.35rem 0.9rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.header-profile-text {
+  text-align: left;
+  line-height: 1.2;
+}
+
+.header-student-name {
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.teller-tag {
+  background: #fbbf24;
+  color: #78350f;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 99px;
+  margin-left: 4px;
+}
+
+.header-assets {
+  font-size: 0.72rem;
+  color: #a7f3d0;
+}
+
+.header-assets strong {
+  color: #fde047;
+  font-size: 0.85rem;
+}
+
+/* 우측 액션 버튼들 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.btn-head {
+  border: none;
+  font-weight: 800;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-head:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.btn-head:active {
+  transform: translateY(0);
+}
+
+.btn-head:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-sheet-url {
+  background: #115e59;
+  color: #f0fdfa;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.btn-sheet-pull {
+  background: #0f766e;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-sheet-push {
+  background: #047857;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-bank {
+  background: #f59e0b;
+  color: #451a03;
+}
+
+.btn-teacher {
+  background: #064e3b;
+  color: #ecfdf5;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-icon {
+  background: rgba(4, 120, 87, 0.8);
+  color: #ecfdf5;
+  padding: 0.45rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+}
+
+/* 토스트 알림 배너 */
+.toast-banner {
+  max-width: 1100px;
+  margin: 0.75rem auto 0;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.2s ease;
+}
+
+.toast-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.toast-error { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+.toast-info { background: #f0fdfa; color: #115e59; border: 1px solid #99f6e4; }
+
+/* 레이아웃 메인 컨테이너 */
+.container {
+  max-width: 1100px;
+  margin: 1.25rem auto 2.5rem;
+  padding: 0 1rem;
+  flex: 1;
+  width: 100%;
+}
+
+/* 3대 지갑 분리 카드 그리드 */
+.wallets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.wallet-card {
+  border-radius: 20px;
+  padding: 1.25rem 1.4rem;
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.wallet-cash { background: linear-gradient(135deg, #10b981, #0d9488); }
+.wallet-savings { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+.wallet-invest { background: linear-gradient(135deg, #6366f1, #3b82f6); }
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-badge {
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 700;
+}
+
+.wallet-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.wallet-amount-row {
+  margin: 0.85rem 0 0.4rem;
+  display: flex;
+  align-items: baseline;
+}
+
+.wallet-number {
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.wallet-currency {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-left: 5px;
+  opacity: 0.9;
+}
+
+.wallet-desc {
+  font-size: 0.73rem;
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+/* 지갑 종합 바 & 이체 버튼 */
+.wallet-summary-bar {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.summary-items {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.summary-items strong {
+  color: var(--text-main);
+}
+
+.btn-transfer-open {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  font-weight: 800;
+  padding: 0.55rem 1.1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+
+.btn-transfer-open:hover {
+  background: #1e293b;
+}
+
+/* 탭 네비게이션 */
+.tab-nav {
+  display: flex;
+  gap: 0.4rem;
+  background: #e2e8f0;
+  padding: 0.35rem;
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: 130px;
+  padding: 0.7rem 0.9rem;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #475569;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.tab-btn.active {
+  background: #ffffff;
+  color: #065f46;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* 배너 헤더 카드 */
+.banner-card {
+  border-radius: 20px;
+  padding: 1.25rem 1.5rem;
+  color: white;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.banner-roles { background: linear-gradient(135deg, #065f46, #0f766e, #1e293b); }
+.banner-stocks { background: linear-gradient(135deg, #1d4ed8, #4338ca, #6b21a8); }
+.banner-news { background: linear-gradient(135deg, #047857, #0f766e, #115e59); }
+.banner-portfolio { background: linear-gradient(135deg, #0f172a, #312e81, #0f172a); }
+.banner-passbook { background: linear-gradient(135deg, #064e3b, #115e59, #0f172a); }
+
+.banner-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  margin-top: 2px;
+}
+
+.banner-desc {
+  font-size: 0.78rem;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+/* 카드 및 그리드 스타일 */
+.white-box {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.25rem;
+}
+
+.stock-grid, .role-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.stock-card, .role-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.stock-card:hover, .role-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.stock-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.stock-name {
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.stock-price {
+  font-size: 1.85rem;
+  font-weight: 900;
+  margin: 0.4rem 0;
+}
+
+.price-up { color: #e11d48; }
+.price-down { color: #2563eb; }
+
+.btn-buy {
+  background: #e11d48;
+  color: white;
+  border: none;
+  font-weight: 800;
+  padding: 0.55rem;
+  border-radius: 10px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.btn-sell {
+  background: #2563eb;
+  color: white;
+  border: none;
+  font-weight: 800;
+  padding: 0.55rem;
+  border-radius: 10px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.btn-sell:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+/* 모달 오버레이 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.modal-box {
+  background: #ffffff;
+  border-radius: 24px;
+  max-width: 520px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalScale 0.2s ease;
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #059669, #0d9488);
+  color: #ffffff;
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.modal-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+/* 키패드 */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.key-btn {
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  padding: 0.85rem;
+  border-radius: 14px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.key-btn:active {
+  background: #e2e8f0;
+}
+
+/* 테이블 공통 */
+.clean-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.clean-table th {
+  background: #f8fafc;
+  padding: 0.65rem 0.85rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+}
+
+.clean-table td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* 폼 요소 */
+input[type="text"], input[type="number"], input[type="password"], textarea, select {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus, textarea:focus, select:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  font-weight: 800;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.btn-primary:hover { background: var(--primary-dark); }
+
+/* 애니메이션 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+
+/* 필터 바 및 뱃지 */
+.filter-bar {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 0.4rem 0.85rem;
+  border-radius: 99px;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-pill:hover {
+  background: #e2e8f0;
+}
+
+.filter-pill.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+}
