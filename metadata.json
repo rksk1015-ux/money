@@ -1,0 +1,6 @@
+{
+  "name": "오이 머니 플래닛 - 초등 학급 경제 스톡&뱅킹",
+  "description": "초등학교 학급 경제 교육용 스톡 & 뱅킹 플랫폼: 3개 지갑 분리(현금/저금통/투자), 4대 가상 주식 거래, 뉴스 시나리오, 은행원 창구 및 선생님 관리자 지원",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
