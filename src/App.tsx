@@ -7,10 +7,16 @@ import {
   EconomyConfig,
   WalletType,
   TransactionRecord,
+  StudentRole,
+  StudentSheetItem,
+  AssignmentItem,
+  AssignmentResult,
+  INITIAL_ROLES,
 } from './types/economy';
 import { storageService } from './services/storage';
 import { soundEffects } from './services/sound';
 import { APPS_SCRIPT_CODE } from './constants/appsScriptCode';
+import confetti from 'canvas-confetti';
 
 import { Header } from './components/Header';
 import { WalletSummaryCards } from './components/WalletSummaryCards';
@@ -19,10 +25,12 @@ import { PassbookTab } from './components/PassbookTab';
 import { StockMarketTab } from './components/StockMarketTab';
 import { StockNewsTab } from './components/StockNewsTab';
 import { PortfolioTab } from './components/PortfolioTab';
+import { RoleAssignmentTab } from './components/RoleAssignmentTab';
 import { TellerDeskModal } from './components/TellerDeskModal';
 import { TeacherConsoleModal } from './components/TeacherConsoleModal';
 import { GoogleSheetsGuideModal } from './components/GoogleSheetsGuideModal';
 import { StudentLoginModal } from './components/StudentLoginModal';
+import { SheetUrlModal } from './components/SheetUrlModal';
 
 import {
   FileText,
@@ -31,6 +39,7 @@ import {
   PieChart,
   Coins,
   ArrowLeftRight,
+  Briefcase,
 } from 'lucide-react';
 
 export default function App() {
@@ -39,8 +48,28 @@ export default function App() {
     return appState.students[0]?.id || '';
   });
 
-  // Active Main Tab: 'passbook' | 'market' | 'news' | 'portfolio'
-  const [activeTab, setActiveTab] = useState<'passbook' | 'market' | 'news' | 'portfolio'>('market');
+  // Active Main Tab: 'passbook' | 'market' | 'news' | 'portfolio' | 'roles'
+  const [activeTab, setActiveTab] = useState<'passbook' | 'market' | 'news' | 'portfolio' | 'roles'>('roles');
+
+  // Roles & Assignments state
+  const [roles, setRoles] = useState<StudentRole[]>(() => {
+    return appState.roles && appState.roles.length > 0 ? appState.roles : INITIAL_ROLES;
+  });
+  const [assignmentResults, setAssignmentResults] = useState<AssignmentResult[]>(() => {
+    return appState.assignmentResults || [];
+  });
+  const [currentAssignments, setCurrentAssignments] = useState<AssignmentItem[]>(() => {
+    // Generate initial assignments from students and roles
+    return appState.students.map((s, idx) => {
+      const assignedRole = (appState.roles && appState.roles[idx]) || INITIAL_ROLES[idx % INITIAL_ROLES.length];
+      return {
+        num: s.studentNumber || idx + 1,
+        name: s.name,
+        role: s.isTeller ? '은행원' : assignedRole.role,
+        desc: s.isTeller ? '학급 은행 창구 입출금 및 통장 관리' : assignedRole.desc,
+      };
+    });
+  });
 
   // Modals state
   const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
@@ -48,10 +77,21 @@ export default function App() {
   const [isTeacherConsoleOpen, setIsTeacherConsoleOpen] = useState<boolean>(false);
   const [isGoogleSheetsGuideOpen, setIsGoogleSheetsGuideOpen] = useState<boolean>(false);
   const [isStudentLoginOpen, setIsStudentLoginOpen] = useState<boolean>(false);
+  const [isSheetUrlModalOpen, setIsSheetUrlModalOpen] = useState<boolean>(false);
 
   // Google Sheets sync state
-  const [isSheetSyncing, setIsSheetSyncing] = useState<boolean>(false);
+  const [isPulling, setIsPulling] = useState<boolean>(false);
+  const [isPushing, setIsPushing] = useState<boolean>(false);
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  // URL state with localStorage backup
+  const [sheetUrl, setSheetUrl] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const localSaved = localStorage.getItem('cucumber_sheet_url');
+      if (localSaved) return localSaved;
+    }
+    return appState.config.googleAppsScriptUrl || '';
+  });
 
   // Sound state
   const [isMuted, setIsMuted] = useState<boolean>(() => soundEffects.getMuted());
@@ -454,62 +494,247 @@ export default function App() {
     return result;
   };
 
-  // 상단 [🔄 시트 불러오기] 버튼 클릭 핸들러
-  const handleTopPullFromSheet = async () => {
-    if (!appState.config.googleAppsScriptUrl) {
-      setSyncToast({
-        message: '구글 스프레드시트 Web App URL이 아직 등록되지 않았습니다. 연동 가이드 창을 엽니다.',
-        type: 'info',
-      });
-      setIsGoogleSheetsGuideOpen(true);
-      return;
-    }
-
-    setIsSheetSyncing(true);
-    setSyncToast({ message: '구글 스프레드시트에서 최신 학생 데이터와 통장 기록을 불러오는 중...', type: 'info' });
-    const res = await handleSyncGoogleSheets('pull');
-    setIsSheetSyncing(false);
-
-    if (res.success) {
-      soundEffects.playSuccess();
-      setSyncToast({ message: '✅ 구글 시트에서 최신 학급 데이터를 성공적으로 불러왔습니다!', type: 'success' });
-    } else {
-      soundEffects.playError();
-      setSyncToast({ message: `❌ 시트 불러오기 실패: ${res.message}`, type: 'error' });
-    }
-
-    setTimeout(() => {
-      setSyncToast((cur) => (cur?.message.includes(res.message) || cur?.type === 'success' ? null : cur));
-    }, 4000);
+  // 구글 시트 URL 저장 핸들러
+  const handleSaveSheetUrl = (newUrl: string) => {
+    setSheetUrl(newUrl);
+    try {
+      localStorage.setItem('cucumber_sheet_url', newUrl);
+    } catch {}
+    updateState((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        googleAppsScriptUrl: newUrl,
+      },
+    }));
+    soundEffects.playSuccess();
+    setSyncToast({ message: '✅ 구글 시트 Web App URL이 성공적으로 저장되었습니다.', type: 'success' });
   };
 
-  // 상단 [💾 시트에 결과 저장] 버튼 클릭 핸들러
-  const handleTopPushToSheet = async () => {
-    if (!appState.config.googleAppsScriptUrl) {
-      setSyncToast({
-        message: '구글 스프레드시트 Web App URL이 아직 등록되지 않았습니다. 연동 가이드 창을 엽니다.',
-        type: 'info',
-      });
-      setIsGoogleSheetsGuideOpen(true);
+  // 1. 구글 시트에서 명단/결과 불러오기 (GET 요청)
+  const handlePullFromSheet = useCallback(async (isSilent: boolean = false) => {
+    const targetUrl = sheetUrl.trim();
+    if (!targetUrl || !targetUrl.startsWith('http')) {
+      if (!isSilent) {
+        soundEffects.playError();
+        setSyncToast({
+          message: '구글 스프레드시트 Web App URL이 아직 등록되지 않았습니다. [⚙️ 시트 URL 설정]에서 주소를 먼저 입력해주세요.',
+          type: 'info',
+        });
+        setIsSheetUrlModalOpen(true);
+      }
       return;
     }
 
-    setIsSheetSyncing(true);
-    setSyncToast({ message: '현재 학생 자산, 주가, 거래 내역을 구글 시트에 기록하는 중...', type: 'info' });
-    const res = await handleSyncGoogleSheets('push');
-    setIsSheetSyncing(false);
+    setIsPulling(true);
+    if (!isSilent) {
+      setSyncToast({ message: '구글 스프레드시트에서 학생 명단, 역할, 배정 결과를 불러오는 중...', type: 'info' });
+    }
+
+    const res = await storageService.fetchSheetRoleData(targetUrl);
+    setIsPulling(false);
+
+    if (!res.success) {
+      if (!isSilent) {
+        soundEffects.playError();
+        setSyncToast({
+          message: `❌ 시트 불러오기 실패: ${res.message} (기존 화면 데이터가 안전하게 유지됩니다)`,
+          type: 'error',
+        });
+      }
+      return;
+    }
+
+    // 성공 시 데이터 파싱 및 반영 (객체 구조 보존)
+    if (res.roles && res.roles.length > 0) {
+      setRoles(res.roles);
+      updateState((p) => ({ ...p, roles: res.roles }));
+    }
+
+    if (res.results) {
+      setAssignmentResults(res.results);
+      updateState((p) => ({ ...p, assignmentResults: res.results }));
+
+      // 최근 결과가 있으면 currentAssignments에도 반영
+      if (res.results.length > 0) {
+        const latestDate = res.results[res.results.length - 1]?.date;
+        const latestItems = res.results.filter((r) => r.date === latestDate);
+        if (latestItems.length > 0) {
+          setCurrentAssignments(
+            latestItems.map((item) => ({
+              num: item.num,
+              name: item.name,
+              role: item.role,
+              desc: item.desc,
+            }))
+          );
+        }
+      }
+    }
+
+    if (res.students && res.students.length > 0) {
+      updateState((prev) => {
+        const existingStudentMap = new Map(prev.students.map((s) => [s.name, s]));
+        const nextStudents: Student[] = res.students!.map((sItem) => {
+          const existing = existingStudentMap.get(sItem.name);
+          if (existing) {
+            return {
+              ...existing,
+              studentNumber: sItem.num,
+              name: sItem.name,
+            };
+          }
+          // 시트에 새로 등록된 학생인 경우 기본 계좌 생성
+          return {
+            id: `student-sheet-${sItem.num}-${Date.now()}`,
+            name: sItem.name,
+            studentNumber: sItem.num,
+            avatar: '🥒',
+            pin: '1234',
+            wallets: { cash: 50, savings: 0, invest: 0 },
+            portfolio: {},
+            isTeller: false,
+          };
+        });
+
+        return {
+          ...prev,
+          students: nextStudents,
+        };
+      });
+
+      // currentAssignments가 비어있다면 새로 매칭
+      setCurrentAssignments((prev) => {
+        if (prev.length > 0) return prev;
+        const curRoles = (res.roles && res.roles.length > 0) ? res.roles : roles;
+        return res.students!.map((s, idx) => ({
+          num: s.num,
+          name: s.name,
+          role: curRoles[idx % curRoles.length]?.role || '칠판당번',
+          desc: curRoles[idx % curRoles.length]?.desc || '학급 활동',
+        }));
+      });
+    }
+
+    if (!isSilent) {
+      soundEffects.playSuccess();
+      setSyncToast({
+        message: `✅ 구글 시트에서 학생 명단(${res.students?.length || 0}명), 역할(${res.roles?.length || 0}종), 배정 결과를 성공적으로 불러왔습니다!`,
+        type: 'success',
+      });
+      setTimeout(() => setSyncToast(null), 5000);
+    }
+  }, [sheetUrl, updateState, roles]);
+
+  // 페이지 열릴 때 자동으로 시트 불러오기 (URL이 있을 경우)
+  useEffect(() => {
+    if (sheetUrl && sheetUrl.startsWith('http')) {
+      handlePullFromSheet(true);
+    }
+  }, []);
+
+  // 2. 배정 결과 구글 시트에 저장하기 (POST 요청)
+  const handlePushAssignmentsToSheet = async () => {
+    const targetUrl = sheetUrl.trim();
+    if (!targetUrl || !targetUrl.startsWith('http')) {
+      soundEffects.playError();
+      setSyncToast({
+        message: '구글 스프레드시트 Web App URL이 아직 등록되지 않았습니다. [⚙️ 시트 URL 설정]에서 주소를 먼저 입력해주세요.',
+        type: 'info',
+      });
+      setIsSheetUrlModalOpen(true);
+      return;
+    }
+
+    if (currentAssignments.length === 0) {
+      alert('저장할 1인 1역할 배정 결과가 없습니다. 먼저 [랜덤 배정하기]나 역할을 지정해주세요.');
+      return;
+    }
+
+    setIsPushing(true);
+    setSyncToast({ message: '1인 1역할 배정 결과를 구글 스프레드시트에 저장하는 중...', type: 'info' });
+
+    // assignments의 각 항목은 { num: student.num, name: student.name, role: selectedRole.role, desc: selectedRole.desc }
+    const assignmentsPayload = currentAssignments.map((a) => ({
+      num: typeof a.num === 'number' ? a.num : parseInt(String(a.num), 10) || 0,
+      name: String(a.name || ''),
+      role: String(a.role || ''),
+      desc: String(a.desc || ''),
+    }));
+
+    const res = await storageService.saveAssignmentsToSheet(targetUrl, assignmentsPayload);
+    setIsPushing(false);
 
     if (res.success) {
       soundEffects.playFanfare();
-      setSyncToast({ message: '✅ 구글 스프레드시트에 모든 학급 데이터가 완벽히 저장되었습니다!', type: 'success' });
+      try {
+        confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+      } catch {}
+
+      // 저장된 히스토리 로컬에도 추가
+      const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+      const newHistoryItems: AssignmentResult[] = assignmentsPayload.map((item) => ({
+        date: nowStr,
+        num: item.num,
+        name: item.name,
+        role: item.role,
+        desc: item.desc,
+      }));
+
+      setAssignmentResults((prev) => [...prev, ...newHistoryItems]);
+      updateState((prev) => ({
+        ...prev,
+        assignmentResults: [...(prev.assignmentResults || []), ...newHistoryItems],
+      }));
+
+      // 은행원으로 배정된 학생은 학급 공인 은행원(isTeller)으로 자동 동기화!
+      const tellerNames = new Set(assignmentsPayload.filter((a) => a.role === '은행원').map((a) => a.name));
+      if (tellerNames.size > 0) {
+        updateState((prev) => ({
+          ...prev,
+          students: prev.students.map((s) => ({
+            ...s,
+            isTeller: tellerNames.has(s.name),
+          })),
+        }));
+      }
+
+      setSyncToast({
+        message: `✅ ${res.message}`,
+        type: 'success',
+      });
+      setTimeout(() => setSyncToast(null), 5000);
     } else {
       soundEffects.playError();
-      setSyncToast({ message: `❌ 시트 저장 실패: ${res.message}`, type: 'error' });
+      setSyncToast({
+        message: `❌ 시트 저장 실패: ${res.message}`,
+        type: 'error',
+      });
     }
+  };
 
-    setTimeout(() => {
-      setSyncToast((cur) => (cur?.message.includes(res.message) || cur?.type === 'success' ? null : cur));
-    }, 4000);
+  // 학생 명단 업데이트 시 연동
+  const handleUpdateStudentsFromRoles = (nextStudents: StudentSheetItem[]) => {
+    updateState((prev) => {
+      const existingMap = new Map(prev.students.map((s) => [s.name, s]));
+      const updated: Student[] = nextStudents.map((item) => {
+        const exist = existingMap.get(item.name);
+        if (exist) {
+          return { ...exist, studentNumber: item.num, name: item.name };
+        }
+        return {
+          id: `student-${Date.now()}-${item.num}`,
+          name: item.name,
+          studentNumber: item.num,
+          avatar: '🥒',
+          pin: '1234',
+          wallets: { cash: 50, savings: 0, invest: 0 },
+          portfolio: {},
+          isTeller: false,
+        };
+      });
+      return { ...prev, students: updated };
+    });
   };
 
   // 9. Export / Import / Reset
@@ -542,18 +767,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       
-      {/* 1. 상단 공통 헤더: [🔄 시트 불러오기] & [💾 시트에 결과 저장] 탑재 */}
+      {/* 1. 상단 공통 헤더: [⚙️ 시트 URL 설정], [🔄 시트에서 명단/결과 불러오기], [💾 배정 결과 구글 시트에 저장] */}
       <Header
         currentStudent={currentStudent}
         totalNetWorth={totalNetWorth}
         onOpenTellerDesk={() => setIsTellerDeskOpen(true)}
         onOpenTeacherConsole={() => setIsTeacherConsoleOpen(true)}
+        onOpenSheetSettings={() => setIsSheetUrlModalOpen(true)}
         onSwitchStudent={() => setIsStudentLoginOpen(true)}
         isMuted={isMuted}
         onToggleSound={handleToggleSound}
-        onPullFromSheet={handleTopPullFromSheet}
-        onPushToSheet={handleTopPushToSheet}
-        isSheetSyncing={isSheetSyncing}
+        onPullFromSheet={() => handlePullFromSheet(false)}
+        onPushToSheet={handlePushAssignmentsToSheet}
+        isPulling={isPulling}
+        isPushing={isPushing}
       />
 
       {/* 스프레드시트 동기화 알림 배너 */}
@@ -595,9 +822,10 @@ export default function App() {
           />
         )}
 
-        {/* 3. 4대 메인 탭 네비게이션 */}
+        {/* 3. 메인 탭 네비게이션: 1인 1역할 배정 포함 */}
         <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-200/80 rounded-2xl border border-slate-300/60 overflow-x-auto scrollbar-none shadow-xs">
           {[
+            { id: 'roles', label: '1인 1역할 배정', icon: Briefcase, emoji: '💼' },
             { id: 'passbook', label: 'My 통장 내역', icon: FileText, emoji: '📗' },
             { id: 'market', label: '주식 시장', icon: TrendingUp, emoji: '📈' },
             { id: 'news', label: '주식 뉴스', icon: Newspaper, emoji: '📰' },
@@ -626,6 +854,30 @@ export default function App() {
 
         {/* 4. 탭 콘텐츠 영역 */}
         <div className="pt-2">
+          {activeTab === 'roles' && (
+            <RoleAssignmentTab
+              students={appState.students.map((s, idx) => ({
+                num: s.studentNumber || idx + 1,
+                name: s.name,
+              }))}
+              roles={roles}
+              currentAssignments={currentAssignments}
+              savedResults={assignmentResults}
+              onUpdateStudents={handleUpdateStudentsFromRoles}
+              onUpdateRoles={(nextRoles) => {
+                setRoles(nextRoles);
+                updateState((p) => ({ ...p, roles: nextRoles }));
+              }}
+              onUpdateAssignments={(nextA) => setCurrentAssignments(nextA)}
+              onPullFromSheet={() => handlePullFromSheet(false)}
+              onPushAssignmentsToSheet={handlePushAssignmentsToSheet}
+              isPulling={isPulling}
+              isPushing={isPushing}
+              sheetUrl={sheetUrl}
+              onOpenSheetSettings={() => setIsSheetUrlModalOpen(true)}
+            />
+          )}
+
           {activeTab === 'passbook' && currentStudent && (
             <PassbookTab student={currentStudent} transactions={appState.transactions} />
           )}
@@ -647,7 +899,6 @@ export default function App() {
               student={currentStudent}
               stocks={appState.stocks}
               onOpenSellModal={(stock) => {
-                // switch to market tab with sell modal
                 setActiveTab('market');
               }}
               onClaimDividends={handleClaimDividends}
@@ -658,6 +909,18 @@ export default function App() {
       </main>
 
       {/* 5. 모달 컴포넌트들 */}
+
+      {/* [⚙️ 시트 URL 설정] 모달 */}
+      <SheetUrlModal
+        isOpen={isSheetUrlModalOpen}
+        onClose={() => setIsSheetUrlModalOpen(false)}
+        currentUrl={sheetUrl}
+        onSaveUrl={handleSaveSheetUrl}
+        onOpenGuide={() => {
+          setIsSheetUrlModalOpen(false);
+          setIsGoogleSheetsGuideOpen(true);
+        }}
+      />
 
       {/* 지갑 이체 모달 */}
       {currentStudent && (

@@ -72,6 +72,31 @@ export interface StockNews {
   appliedAt?: number;
 }
 
+export interface StudentRole {
+  role: string;
+  desc: string;
+}
+
+export interface StudentSheetItem {
+  num: number;
+  name: string;
+}
+
+export interface AssignmentItem {
+  num: number;
+  name: string;
+  role: string;
+  desc: string;
+}
+
+export interface AssignmentResult {
+  date: string;
+  num: number;
+  name: string;
+  role: string;
+  desc: string;
+}
+
 export interface EconomyConfig {
   teacherPin: string;
   tellerPin: string;
@@ -88,7 +113,18 @@ export interface AppState {
   news: StockNews[];
   transactions: TransactionRecord[];
   config: EconomyConfig;
+  roles?: StudentRole[];
+  assignmentResults?: AssignmentResult[];
 }
+
+export const INITIAL_ROLES: StudentRole[] = [
+  { role: '은행원', desc: '학급 은행 창구 입출금 및 통장 거래 내역 관리' },
+  { role: '칠판당번', desc: '수업 후 칠판 닦기 및 분필·지우개 정리' },
+  { role: '급식도우미', desc: '급식 배식 순서 안내 및 식사 예절 지도' },
+  { role: '환경미화', desc: '교실 분리수거함 정리 및 환기 담당' },
+  { role: '학습도우미', desc: '수업 준비물 점검 및 과제 제출함 관리' },
+  { role: '에너지지킴이', desc: '쉬는 시간 전등 끄기 및 냉난방기 점검' },
+];
 
 // 4개 가상 기업 초기 데이터 (사양서 명시)
 export const INITIAL_STOCKS: StockCompany[] = [

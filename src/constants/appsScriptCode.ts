@@ -6,11 +6,11 @@ export const APPS_SCRIPT_CODE = `/**
  * 1. 새 스프레드시트에서 [확장 프로그램] -> [Apps Script]
  * 2. 전체 코드 붙여넣고 저장(Ctrl+S)
  * 3. [배포] -> [새 배포] -> 유형: [웹 앱] -> 액세스 권한: [모든 사용자(Anyone)] -> 배포
- * 4. 생성된 웹 앱 URL을 복사하여 오이 머니 플래닛 [선생님 관리] -> [구글 시트 연동]에 붙여넣기
+ * 4. 생성된 웹 앱 URL을 복사하여 오이 머니 플래닛 상단 [⚙️ 시트 URL 설정]에 붙여넣기
  */
 
 function doGet(e) {
-  var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'GET_ALL_DATA';
+  var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : '';
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   if (action === 'PING') {
@@ -20,26 +20,107 @@ function doGet(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  var backupSheet = getOrCreateSheet(ss, '전체데이터_백업');
-  var rawJson = backupSheet.getRange(1, 1).getValue();
-
-  if (!rawJson) {
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'empty',
-      message: '시트에 저장된 데이터가 없습니다.'
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
   try {
-    var parsed = JSON.parse(rawJson);
-    return ContentService.createTextOutput(JSON.stringify({
+    // 1. 학생 명단 시트 확인 및 로드
+    var studentSheet = getOrCreateSheet(ss, '학생명단');
+    var studentData = studentSheet.getDataRange().getValues();
+    var students = [];
+
+    if (studentData.length <= 1) {
+      var defaultStudents = [
+        [1, '김민준'],
+        [2, '이서연'],
+        [3, '박도윤'],
+        [4, '정지우'],
+        [5, '최예준'],
+        [6, '한수아']
+      ];
+      studentSheet.clear();
+      studentSheet.appendRow(['번호', '이름']);
+      styleHeaderRow(studentSheet, '#2E7D32');
+      defaultStudents.forEach(function(s) { studentSheet.appendRow(s); });
+      studentData = studentSheet.getDataRange().getValues();
+    }
+
+    for (var i = 1; i < studentData.length; i++) {
+      var num = parseInt(studentData[i][0], 10) || i;
+      var name = String(studentData[i][1] || '').trim();
+      if (name) {
+        students.push({ num: num, name: name });
+      }
+    }
+
+    // 2. 역할 목록 시트 확인 및 로드
+    var roleSheet = getOrCreateSheet(ss, '역할목록');
+    var roleData = roleSheet.getDataRange().getValues();
+    var roles = [];
+
+    if (roleData.length <= 1) {
+      var defaultRoles = [
+        ['은행원', '학급 은행 창구 입출금 및 통장 거래 내역 관리'],
+        ['칠판당번', '수업 후 칠판 닦기 및 분필·지우개 정리'],
+        ['급식도우미', '급식 배식 순서 안내 및 식사 예절 지도'],
+        ['환경미화', '교실 분리수거함 정리 및 환기 담당'],
+        ['학습도우미', '수업 준비물 점검 및 과제 제출함 관리'],
+        ['에너지지킴이', '쉬는 시간 전등 끄기 및 냉난방기 점검']
+      ];
+      roleSheet.clear();
+      roleSheet.appendRow(['역할명', '설명']);
+      styleHeaderRow(roleSheet, '#1565C0');
+      defaultRoles.forEach(function(r) { roleSheet.appendRow(r); });
+      roleData = roleSheet.getDataRange().getValues();
+    }
+
+    for (var j = 1; j < roleData.length; j++) {
+      var rName = String(roleData[j][0] || '').trim();
+      var rDesc = String(roleData[j][1] || '').trim();
+      if (rName) {
+        roles.push({ role: rName, desc: rDesc });
+      }
+    }
+
+    // 3. 배정 결과 히스토리 시트 확인 및 로드
+    var resultsSheet = getOrCreateSheet(ss, '배정결과');
+    var resData = resultsSheet.getDataRange().getValues();
+    var results = [];
+
+    if (resData.length <= 1) {
+      resultsSheet.clear();
+      resultsSheet.appendRow(['배정일시', '번호', '학생이름', '배정역할', '역할설명']);
+      styleHeaderRow(resultsSheet, '#D84315');
+    } else {
+      for (var k = 1; k < resData.length; k++) {
+        var dateStr = String(resData[k][0] || '');
+        var sNum = parseInt(resData[k][1], 10) || 0;
+        var sName = String(resData[k][2] || '').trim();
+        var sRole = String(resData[k][3] || '').trim();
+        var sDesc = String(resData[k][4] || '').trim();
+        if (sName && sRole) {
+          results.push({
+            date: dateStr,
+            num: sNum,
+            name: sName,
+            role: sRole,
+            desc: sDesc
+          });
+        }
+      }
+    }
+
+    var outputResponse = {
       status: 'success',
-      data: parsed
-    })).setMimeType(ContentService.MimeType.JSON);
+      students: students,
+      roles: roles,
+      results: results
+    };
+
+    return ContentService.createTextOutput(JSON.stringify(outputResponse))
+      .setMimeType(ContentService.MimeType.JSON);
+
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       status: 'error',
-      message: '데이터 파싱 실패: ' + err.toString()
+      message: '시트 조회 중 오류 발생: ' + err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -52,135 +133,63 @@ function doPost(e) {
     var rawPostData = e.postData.contents;
     var payload = JSON.parse(rawPostData);
     var action = payload.action;
-    var data = payload.payload;
-
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    if (action === 'SAVE_ALL_DATA' && data) {
-      saveAllDataToSheets(ss, data);
-      
+    // 1. 배정 결과 저장 (action: "saveResults")
+    if (action === 'saveResults' && Array.isArray(payload.assignments)) {
+      var resultsSheet = getOrCreateSheet(ss, '배정결과');
+      if (resultsSheet.getLastRow() === 0) {
+        resultsSheet.appendRow(['배정일시', '번호', '학생이름', '배정역할', '역할설명']);
+        styleHeaderRow(resultsSheet, '#D84315');
+      }
+
+      var nowStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+
+      payload.assignments.forEach(function(item) {
+        if (item && item.name) {
+          resultsSheet.appendRow([
+            nowStr,
+            item.num || 0,
+            String(item.name || ''),
+            String(item.role || ''),
+            String(item.desc || '')
+          ]);
+        }
+      });
+      resultsSheet.autoResizeColumns(1, 5);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: '배정 결과 ' + payload.assignments.length + '건이 구글 스프레드시트에 성공적으로 저장되었습니다.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 2. 전체 경제 데이터 백업 (action: "SAVE_ALL_DATA")
+    if (action === 'SAVE_ALL_DATA' && payload.payload) {
+      var data = payload.payload;
       var backupSheet = getOrCreateSheet(ss, '전체데이터_백업');
       backupSheet.getRange(1, 1).setValue(JSON.stringify(data));
       backupSheet.getRange(1, 2).setValue(new Date());
 
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
-        message: '학생 자산, 거래내역, 주식 현황이 스프레드시트에 완벽히 기록되었습니다.'
+        message: '오이 머니 플래닛 전체 데이터가 백업되었습니다.'
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
     return ContentService.createTextOutput(JSON.stringify({
-      status: 'unknown_action'
+      status: 'error',
+      message: '알 수 없는 action 요청입니다: ' + action
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       status: 'error',
-      error: err.toString()
+      message: '서버 처리 오류: ' + err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
   }
-}
-
-function saveAllDataToSheets(ss, data) {
-  var students = data.students || [];
-  var stocks = data.stocks || [];
-  var transactions = data.transactions || [];
-
-  // 1. 학생_자산현황 시트
-  var studentSheet = getOrCreateSheet(ss, '학생_자산현황');
-  studentSheet.clear();
-  var studentHeaders = [
-    '학번/번호', '이름', '통장 비밀번호', '👛 현금 지갑', '🐷 저금통(예금)',
-    '📈 투자 계좌', '📊 주식 평가액', '💰 총 순자산', '은행원 여부', '보유 주식 상세'
-  ];
-  studentSheet.appendRow(studentHeaders);
-  styleHeaderRow(studentSheet, '#2E7D32');
-
-  var stockPriceMap = {};
-  stocks.forEach(function(s) { stockPriceMap[s.id] = s.price; });
-
-  students.forEach(function(s, idx) {
-    var stockVal = 0;
-    var stockDetails = [];
-    if (s.portfolio) {
-      for (var compId in s.portfolio) {
-        var item = s.portfolio[compId];
-        var curPrice = stockPriceMap[compId] || 0;
-        var val = (item.quantity || 0) * curPrice;
-        stockVal += val;
-        if (item.quantity > 0) {
-          stockDetails.push(compId + ': ' + item.quantity + '주 (평단 ' + item.avgBuyPrice + '오이)');
-        }
-      }
-    }
-    var total = (s.wallets.cash || 0) + (s.wallets.savings || 0) + (s.wallets.invest || 0) + stockVal;
-
-    studentSheet.appendRow([
-      s.studentNumber || (idx + 1),
-      s.name,
-      s.pin,
-      s.wallets.cash || 0,
-      s.wallets.savings || 0,
-      s.wallets.invest || 0,
-      stockVal,
-      total,
-      s.isTeller ? '★ 지정 은행원' : '일반 학생',
-      stockDetails.join(' | ') || '없음'
-    ]);
-  });
-  studentSheet.autoResizeColumns(1, 10);
-
-  // 2. 가상_주식현황 시트
-  var stockSheet = getOrCreateSheet(ss, '가상_주식현황');
-  stockSheet.clear();
-  var stockHeaders = ['종목코드', '기업명', '현재 주가(오이)', '이전 주가', '변동률(%)', '기본 배당률(%)', '위험도', '특징 및 업종'];
-  stockSheet.appendRow(stockHeaders);
-  styleHeaderRow(stockSheet, '#1565C0');
-
-  stocks.forEach(function(stock) {
-    var changePercent = stock.prevPrice ? (((stock.price - stock.prevPrice) / stock.prevPrice) * 100).toFixed(1) + '%' : '0%';
-    stockSheet.appendRow([
-      stock.code,
-      stock.name,
-      stock.price,
-      stock.prevPrice,
-      changePercent,
-      stock.dividendRate + '%',
-      stock.riskLevel,
-      stock.themeBadge + ' - ' + stock.features
-    ]);
-  });
-  stockSheet.autoResizeColumns(1, 8);
-
-  // 3. 거래_통장기록부 시트
-  var txSheet = getOrCreateSheet(ss, '거래_통장기록부');
-  txSheet.clear();
-  var txHeaders = ['거래ID', '거래일시', '학생이름', '유형', '카테고리', '금액(오이)', '대상 지갑', '출처 지갑', '상세 사유/항목', '처리자'];
-  txSheet.appendRow(txHeaders);
-  styleHeaderRow(txSheet, '#D84315');
-
-  var sortedTx = transactions.slice().sort(function(a, b) { return b.timestamp - a.timestamp; });
-  sortedTx.forEach(function(tx) {
-    var dateStr = new Date(tx.timestamp).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-    var walletName = tx.targetWallet === 'cash' ? '현금 지갑' : tx.targetWallet === 'savings' ? '저금통(예금)' : '투자 계좌';
-    var srcWalletName = tx.sourceWallet ? (tx.sourceWallet === 'cash' ? '현금' : tx.sourceWallet === 'savings' ? '저금통' : '투자계좌') : '-';
-
-    txSheet.appendRow([
-      tx.id,
-      dateStr,
-      tx.studentName,
-      tx.type,
-      tx.category,
-      tx.amount,
-      walletName,
-      srcWalletName,
-      tx.description,
-      tx.processedBy + (tx.tellerName ? ' (' + tx.tellerName + ')' : '')
-    ]);
-  });
-  txSheet.autoResizeColumns(1, 10);
 }
 
 function getOrCreateSheet(ss, name) {
@@ -192,7 +201,7 @@ function getOrCreateSheet(ss, name) {
 }
 
 function styleHeaderRow(sheet, hexColor) {
-  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn());
+  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1);
   header.setBackground(hexColor);
   header.setFontColor('#FFFFFF');
   header.setFontWeight('bold');

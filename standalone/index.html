@@ -24,8 +24,9 @@
     </div>
 
     <div class="header-actions">
-      <button class="btn-header" style="background:#0f766e; color:white;" onclick="alert('구글 스프레드시트 Apps Script 연동을 준비 중입니다. Web App URL을 설정한 후 시트 데이터를 불러올 수 있습니다.')">🔄 시트 불러오기</button>
-      <button class="btn-header" style="background:#065f46; color:white;" onclick="alert('현재 학생 자산 및 통장 데이터를 구글 시트에 저장하는 기능입니다. Apps Script URL을 연동해 주세요.')">💾 시트에 결과 저장</button>
+      <button class="btn-header" style="background:#115e59; color:white;" onclick="const u = prompt('Google Apps Script 웹 앱 URL을 입력하세요:', localStorage.getItem('cucumber_sheet_url') || ''); if (u) { localStorage.setItem('cucumber_sheet_url', u); alert('시트 URL이 저장되었습니다.'); }">⚙️ 시트 URL 설정</button>
+      <button class="btn-header" style="background:#0f766e; color:white;" onclick="alert('구글 스프레드시트 Apps Script에서 학생 명단과 역할을 불러옵니다.')">🔄 시트에서 명단/결과 불러오기</button>
+      <button class="btn-header" style="background:#065f46; color:white;" onclick="alert('배정 결과를 구글 스프레드시트에 저장합니다.')">💾 배정 결과 구글 시트에 저장</button>
       <button class="btn-header" onclick="alert('React 앱 메인 화면에서 정밀한 은행 창구 및 학생 PIN 인증을 이용하실 수 있습니다.')">🏦 은행 창구</button>
       <button class="btn-header admin" onclick="alert('React 앱 메인 화면에서 선생님 관리 콘솔을 이용하실 수 있습니다.')">🛠️ 선생님 관리</button>
     </div>

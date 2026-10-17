@@ -19,12 +19,14 @@ interface HeaderProps {
   totalNetWorth: number;
   onOpenTellerDesk: () => void;
   onOpenTeacherConsole: () => void;
+  onOpenSheetSettings: () => void;
   onSwitchStudent: () => void;
   isMuted: boolean;
   onToggleSound: () => void;
   onPullFromSheet: () => void;
   onPushToSheet: () => void;
-  isSheetSyncing: boolean;
+  isPulling: boolean;
+  isPushing: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,12 +34,14 @@ export const Header: React.FC<HeaderProps> = ({
   totalNetWorth,
   onOpenTellerDesk,
   onOpenTeacherConsole,
+  onOpenSheetSettings,
   onSwitchStudent,
   isMuted,
   onToggleSound,
   onPullFromSheet,
   onPushToSheet,
-  isSheetSyncing,
+  isPulling,
+  isPushing,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-emerald-600 text-white shadow-md border-b border-emerald-700">
@@ -64,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* 중앙: 학생 프로필 정보 (로그인 시) */}
           {currentStudent && (
-            <div className="hidden md:flex items-center gap-3 bg-emerald-700/70 py-1.5 px-3.5 rounded-2xl border border-emerald-500/60 shadow-sm">
+            <div className="hidden xl:flex items-center gap-3 bg-emerald-700/70 py-1.5 px-3.5 rounded-2xl border border-emerald-500/60 shadow-sm">
               <div className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center text-lg font-bold shadow-sm">
                 {currentStudent.avatar || '🥒'}
               </div>
@@ -92,34 +96,56 @@ export const Header: React.FC<HeaderProps> = ({
           {/* 우측 액션 버튼들 */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             
-            {/* [🔄 시트 불러오기] 버튼 */}
+            {/* [⚙️ 시트 URL 설정] 버튼 */}
+            <button
+              onClick={() => {
+                soundEffects.playClick();
+                onOpenSheetSettings();
+              }}
+              title="구글 스프레드시트 웹앱 주소(URL) 설정"
+              className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-teal-800 hover:bg-teal-900 active:scale-95 transition-all text-teal-100 hover:text-white font-bold text-xs sm:text-sm border border-teal-600 shadow-xs"
+            >
+              <span className="text-sm">⚙️</span>
+              <span className="hidden sm:inline">시트 URL 설정</span>
+              <span className="sm:hidden">URL</span>
+            </button>
+
+            {/* [🔄 시트에서 명단/결과 불러오기] 버튼 */}
             <button
               onClick={() => {
                 soundEffects.playClick();
                 onPullFromSheet();
               }}
-              disabled={isSheetSyncing}
-              title="구글 스프레드시트에서 최신 학생 자산 및 통장 데이터 가져오기"
+              disabled={isPulling}
+              title="구글 시트에서 학생 명단, 역할 목록, 배정 결과를 불러옵니다"
               className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-teal-700/90 hover:bg-teal-700 active:scale-95 transition-all text-white font-bold text-xs sm:text-sm border border-teal-500/60 shadow-xs disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-200 ${isSheetSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">시트 불러오기</span>
-              <span className="sm:hidden">불러오기</span>
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-200 ${isPulling ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">
+                {isPulling ? '불러오는 중...' : '🔄 시트에서 명단/결과 불러오기'}
+              </span>
+              <span className="md:hidden">
+                {isPulling ? '불러오는 중...' : '시트 불러오기'}
+              </span>
             </button>
 
-            {/* [💾 시트에 결과 저장] 버튼 */}
+            {/* [💾 배정 결과 구글 시트에 저장] 버튼 */}
             <button
               onClick={() => {
                 soundEffects.playClick();
                 onPushToSheet();
               }}
-              disabled={isSheetSyncing}
-              title="현재 학생 자산, 주가, 거래 내역을 구글 스프레드시트에 영구 저장"
+              disabled={isPushing}
+              title="1인 1역할 배정 결과를 구글 스프레드시트에 영구 저장합니다"
               className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 active:scale-95 transition-all text-white font-bold text-xs sm:text-sm border border-emerald-500/70 shadow-xs disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-300" />
-              <span className="hidden sm:inline">시트에 결과 저장</span>
-              <span className="sm:hidden">시트 저장</span>
+              <span className="hidden md:inline">
+                {isPushing ? '저장 중...' : '💾 배정 결과 구글 시트에 저장'}
+              </span>
+              <span className="md:hidden">
+                {isPushing ? '저장 중...' : '결과 저장'}
+              </span>
             </button>
 
             {/* 은행 창구 버튼 */}
@@ -128,11 +154,11 @@ export const Header: React.FC<HeaderProps> = ({
                 soundEffects.playClick();
                 onOpenTellerDesk();
               }}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-900 font-bold text-xs sm:text-sm shadow-sm border border-amber-300"
+              className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-900 font-bold text-xs sm:text-sm shadow-sm border border-amber-300"
             >
               <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-950" />
-              <span className="hidden sm:inline">은행 창구</span>
-              <span className="sm:hidden">창구</span>
+              <span className="hidden lg:inline">은행 창구</span>
+              <span className="lg:hidden">창구</span>
             </button>
 
             {/* 선생님 관리 버튼 */}
@@ -141,11 +167,11 @@ export const Header: React.FC<HeaderProps> = ({
                 soundEffects.playClick();
                 onOpenTeacherConsole();
               }}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-900/90 hover:bg-emerald-950 active:scale-95 transition-all text-emerald-100 hover:text-white font-bold text-xs sm:text-sm border border-emerald-700 shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-900/90 hover:bg-emerald-950 active:scale-95 transition-all text-emerald-100 hover:text-white font-bold text-xs sm:text-sm border border-emerald-700 shadow-sm"
             >
               <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-300" />
-              <span className="hidden lg:inline">선생님 관리</span>
-              <span className="lg:hidden">관리</span>
+              <span className="hidden xl:inline">선생님 관리</span>
+              <span className="xl:hidden">관리</span>
             </button>
 
             {/* 소리 토글 */}
