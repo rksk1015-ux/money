@@ -543,13 +543,26 @@ function render() {
   document.getElementById('header-total-assets').textContent = totalNet.toLocaleString();
 
   // 지갑 3종 카드
-  document.getElementById('cash-amount').textContent = (student.wallets.cash || 0).toLocaleString();
+  const cashAmountEl = document.getElementById('cash-amount');
+  const cashVal = student.wallets.cash || 0;
+  cashAmountEl.textContent = cashVal.toLocaleString();
+  if (cashVal < 0) {
+    cashAmountEl.style.color = '#fecaca'; // 마이너스 잔액 강조
+  } else {
+    cashAmountEl.style.color = '#ffffff';
+  }
   document.getElementById('savings-amount').textContent = (student.wallets.savings || 0).toLocaleString();
   document.getElementById('invest-amount').textContent = (student.wallets.invest || 0).toLocaleString();
   document.getElementById('savings-rate-badge').textContent = `이자 ${state.config.interestRate.toFixed(1)}%`;
 
   // 자산 바
-  document.getElementById('bar-cash').textContent = (student.wallets.cash || 0).toLocaleString();
+  const barCashEl = document.getElementById('bar-cash');
+  barCashEl.textContent = cashVal.toLocaleString();
+  if (cashVal < 0) {
+    barCashEl.style.color = '#e11d48';
+  } else {
+    barCashEl.style.color = 'inherit';
+  }
   document.getElementById('bar-savings').textContent = (student.wallets.savings || 0).toLocaleString();
   document.getElementById('bar-invest').textContent = (student.wallets.invest || 0).toLocaleString();
   document.getElementById('bar-stocks').textContent = stockVal.toLocaleString();
@@ -1035,11 +1048,6 @@ function startStudentBankAuth() {
     sound.error();
     return;
   }
-  if (cat === '벌금' && student.wallets.cash < amt) {
-    alert('학생의 현금 지갑 잔액이 부족합니다.');
-    sound.error();
-    return;
-  }
 
   pendingBankTx = { sId, cat, desc, amt, tellerName, studentName: student.name };
   document.getElementById('student-pin-target-name').textContent = student.name;
@@ -1118,6 +1126,7 @@ function verifyTeacherLogin() {
     sound.success();
     document.getElementById('teacher-auth-box').style.display = 'none';
     document.getElementById('teacher-dashboard').style.display = 'block';
+    renderTeacherStocks();
     renderTeacherTable();
   } else {
     sound.error();
@@ -1125,25 +1134,162 @@ function verifyTeacherLogin() {
   }
 }
 
+// 선생님 주가 직접 조절 렌더링
+function renderTeacherStocks() {
+  const container = document.getElementById('teacher-stocks-grid');
+  if (!container) return;
+  container.innerHTML = state.stocks.map(st => {
+    const diff = st.price - st.prevPrice;
+    const isUp = diff > 0;
+    const isDown = diff < 0;
+    return `
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-weight:900; font-size:0.85rem;">${st.icon} ${st.name}</span>
+            <span style="font-size:0.68rem; font-weight:800; padding:1px 5px; border-radius:4px; background:${isUp ? '#ffe4e6' : isDown ? '#dbeafe' : '#f1f5f9'}; color:${isUp ? '#e11d48' : isDown ? '#2563eb' : '#64748b'};">
+              ${isUp ? '▲ +' : isDown ? '▼ ' : ''}${diff}
+            </span>
+          </div>
+          <div style="font-size:0.68rem; color:#64748b; margin-bottom:6px;">${st.badge}</div>
+        </div>
+
+        <div>
+          <div style="display:flex; align-items:center; gap:4px; margin:6px 0;">
+            <span style="font-size:0.72rem; font-weight:700; color:#475569;">주가:</span>
+            <input type="number" id="input-stock-price-${st.id}" min="1" max="200" value="${st.price}" style="width:58px; padding:3px 5px; border-radius:6px; border:1px solid #cbd5e1; font-weight:900; font-size:0.95rem; text-align:center; color:#0f172a;" onchange="teacherSetStockPrice('${st.id}', this.value)" />
+            <span style="font-size:0.75rem; font-weight:800;">오이</span>
+            <button style="padding:4px 6px; border-radius:6px; background:#059669; color:white; border:none; font-weight:800; font-size:0.72rem; cursor:pointer;" onclick="teacherSetStockPrice('${st.id}', document.getElementById('input-stock-price-${st.id}').value)">적용</button>
+          </div>
+          <div style="display:flex; gap:3px;">
+            <button style="flex:1; padding:3px 0; font-size:0.68rem; border-radius:4px; background:#fee2e2; border:1px solid #fecaca; color:#991b1b; font-weight:800; cursor:pointer;" onclick="teacherStepStockPrice('${st.id}', -5)">-5</button>
+            <button style="flex:1; padding:3px 0; font-size:0.68rem; border-radius:4px; background:#fee2e2; border:1px solid #fecaca; color:#991b1b; font-weight:800; cursor:pointer;" onclick="teacherStepStockPrice('${st.id}', -1)">-1</button>
+            <button style="flex:1; padding:3px 0; font-size:0.68rem; border-radius:4px; background:#dcfce7; border:1px solid #bbf7d0; color:#166534; font-weight:800; cursor:pointer;" onclick="teacherStepStockPrice('${st.id}', 1)">+1</button>
+            <button style="flex:1; padding:3px 0; font-size:0.68rem; border-radius:4px; background:#dcfce7; border:1px solid #bbf7d0; color:#166534; font-weight:800; cursor:pointer;" onclick="teacherStepStockPrice('${st.id}', 5)">+5</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function teacherSetStockPrice(stockId, newPrice) {
+  const st = state.stocks.find(s => s.id === stockId);
+  if (!st) return;
+  const p = parseInt(newPrice, 10);
+  if (isNaN(p) || p < 1) {
+    alert('주가는 1 오이 이상이어야 합니다.');
+    return;
+  }
+  const oldPrice = st.price;
+  st.prevPrice = oldPrice;
+  st.price = p;
+  saveState();
+  sound.fanfare();
+  triggerConfetti();
+  showToast(`📈 [${st.name}] 주가가 ${oldPrice}오이 ➔ ${p}오이로 변경되었습니다!`, 'success');
+  renderTeacherStocks();
+  render();
+}
+
+function teacherStepStockPrice(stockId, step) {
+  const st = state.stocks.find(s => s.id === stockId);
+  if (!st) return;
+  const nextPrice = Math.max(1, st.price + step);
+  teacherSetStockPrice(stockId, nextPrice);
+}
+
+// 선생님 학생 자산 직접 편집 및 관리 테이블
 function renderTeacherTable() {
   const tbody = document.getElementById('teacher-student-tbody');
   if (!tbody) return;
-  tbody.innerHTML = state.students.map(s => `
-    <tr>
-      <td style="font-weight:700;">#${s.num}</td>
-      <td style="font-weight:800;">${s.avatar || '🥒'} ${s.name}</td>
-      <td style="font-mono; color:#059669; font-weight:700;">${s.pin}</td>
-      <td>${s.wallets.cash} 오이</td>
-      <td>${s.wallets.savings} 오이</td>
-      <td>${s.wallets.invest} 오이</td>
-      <td>
-        <input type="checkbox" ${s.isTeller ? 'checked' : ''} onchange="toggleTellerRole('${s.id}')">
-      </td>
-      <td>
-        <button style="padding:2px 6px; font-size:0.7rem; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer;" onclick="resetStudentPin('${s.id}')">비번1234리셋</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = state.students.map(s => {
+    const isNeg = (s.wallets.cash || 0) < 0;
+    return `
+      <tr>
+        <td style="font-weight:700;">#${s.num}</td>
+        <td style="font-weight:800;">${s.avatar || '🥒'} ${s.name}</td>
+        <td style="font-mono; color:#059669; font-weight:700;">${s.pin}</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+            <input type="number" value="${s.wallets.cash}" style="width:68px; padding:3px 5px; border-radius:6px; border:1px solid ${isNeg ? '#ef4444' : '#cbd5e1'}; font-weight:800; font-size:0.85rem; color:${isNeg ? '#dc2626' : '#0f172a'}; background:${isNeg ? '#fff1f2' : '#ffffff'};" onchange="teacherUpdateStudentCash('${s.id}', this.value)" title="엔터 또는 입력 시 즉시 변경 (마이너스 가능)" />
+            <span style="font-size:0.75rem; font-weight:700; color:${isNeg ? '#dc2626' : '#64748b'};">오이</span>
+            <button style="padding:2px 5px; font-size:0.7rem; border-radius:4px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:800; cursor:pointer;" onclick="teacherAdjustCash('${s.id}', 10, '선생님 칭찬 보너스')" title="10오이 보너스">+10</button>
+            <button style="padding:2px 5px; font-size:0.7rem; border-radius:4px; background:#fef2f2; border:1px solid #fecdd3; color:#991b1b; font-weight:800; cursor:pointer;" onclick="teacherAdjustCash('${s.id}', -10, '선생님 규칙 위반 벌금')" title="10오이 차감 (마이너스 가능)">-10</button>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:3px;">
+            <input type="number" min="0" value="${s.wallets.savings}" style="width:60px; padding:3px 5px; border-radius:6px; border:1px solid #cbd5e1; font-weight:800; font-size:0.85rem;" onchange="teacherUpdateStudentSavings('${s.id}', this.value)" title="저금통 잔액 직접 변경" />
+            <span style="font-size:0.72rem; color:#64748b;">오이</span>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:3px;">
+            <input type="number" min="0" value="${s.wallets.invest}" style="width:60px; padding:3px 5px; border-radius:6px; border:1px solid #cbd5e1; font-weight:800; font-size:0.85rem;" onchange="teacherUpdateStudentInvest('${s.id}', this.value)" title="투자 예수금 직접 변경" />
+            <span style="font-size:0.72rem; color:#64748b;">오이</span>
+          </div>
+        </td>
+        <td style="text-align:center;">
+          <input type="checkbox" ${s.isTeller ? 'checked' : ''} onchange="toggleTellerRole('${s.id}')">
+        </td>
+        <td>
+          <button style="padding:3px 7px; font-size:0.7rem; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer; font-weight:700;" onclick="resetStudentPin('${s.id}')">비번리셋</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function teacherUpdateStudentCash(sId, newAmount) {
+  const s = state.students.find(st => st.id === sId);
+  if (!s) return;
+  const val = parseInt(newAmount, 10);
+  if (isNaN(val)) return;
+  const oldVal = s.wallets.cash;
+  s.wallets.cash = val; // 음수(마이너스)도 완전히 허용!
+  const diff = val - oldVal;
+  state.transactions.unshift({
+    id: `t-${Date.now()}`,
+    studentId: s.id,
+    studentName: s.name,
+    type: diff >= 0 ? 'income' : 'expense',
+    category: '선생님조정',
+    amount: Math.abs(diff),
+    target: 'cash',
+    desc: `선생님 자산 직접 변경 (${oldVal}오이 ➔ ${val}오이)`,
+    by: '선생님',
+    time: Date.now()
+  });
+  saveState();
+  sound.coin();
+  showToast(`[${s.name}] 현금 지갑이 ${val} 오이로 변경되었습니다.`, 'success');
+  renderTeacherTable();
+  render();
+}
+
+function teacherUpdateStudentSavings(sId, newAmount) {
+  const s = state.students.find(st => st.id === sId);
+  if (!s) return;
+  const val = parseInt(newAmount, 10);
+  if (isNaN(val)) return;
+  s.wallets.savings = Math.max(0, val);
+  saveState();
+  showToast(`[${s.name}] 저금통 잔액이 ${s.wallets.savings} 오이로 변경되었습니다.`, 'info');
+  renderTeacherTable();
+  render();
+}
+
+function teacherUpdateStudentInvest(sId, newAmount) {
+  const s = state.students.find(st => st.id === sId);
+  if (!s) return;
+  const val = parseInt(newAmount, 10);
+  if (isNaN(val)) return;
+  s.wallets.invest = Math.max(0, val);
+  saveState();
+  showToast(`[${s.name}] 투자 예수금이 ${s.wallets.invest} 오이로 변경되었습니다.`, 'info');
+  renderTeacherTable();
+  render();
 }
 
 function toggleTellerRole(sId) {
@@ -1242,7 +1388,7 @@ function updateInterestRate(newRate) {
 function teacherAdjustCash(sId, delta, reason) {
   const s = state.students.find(st => st.id === sId);
   if (!s) return;
-  s.wallets.cash = Math.max(0, s.wallets.cash + delta);
+  s.wallets.cash = s.wallets.cash + delta; // 마이너스 허용
   state.transactions.unshift({
     id: `t-${Date.now()}`,
     studentId: s.id,
@@ -1583,6 +1729,12 @@ window.openCodeGuideModal = openCodeGuideModal;
 window.copyAppsScriptCode = copyAppsScriptCode;
 window.teacherAdjustCash = teacherAdjustCash;
 window.updateInterestRate = updateInterestRate;
+window.renderTeacherStocks = renderTeacherStocks;
+window.teacherSetStockPrice = teacherSetStockPrice;
+window.teacherStepStockPrice = teacherStepStockPrice;
+window.teacherUpdateStudentCash = teacherUpdateStudentCash;
+window.teacherUpdateStudentSavings = teacherUpdateStudentSavings;
+window.teacherUpdateStudentInvest = teacherUpdateStudentInvest;
 
 // 윈도우 로드 시 자동 실행
 window.onload = function() {

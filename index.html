@@ -534,9 +534,18 @@
               </div>
             </div>
 
+            <!-- 가상 주식 주가 직접 조절 & 관리 -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:14px; margin-bottom:1.25rem;">
+              <div style="margin-bottom:8px;">
+                <h4 style="font-weight:900; font-size:0.9rem; color:#0f172a;">📈 가상 4대 기업 주가 직접 조절 & 변동 관리</h4>
+                <p style="font-size:0.75rem; color:#64748b; margin-top:2px;">교사가 원하는 주가를 직접 입력하거나 +/- 버튼으로 즉시 변경할 수 있습니다. (전체 학생 화면에 실시간 반영)</p>
+              </div>
+              <div id="teacher-stocks-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px;"></div>
+            </div>
+
             <!-- 주가 뉴스 원클릭 발행 (시나리오 1, 2, 3세트) -->
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:14px; margin-bottom:1.25rem;">
-              <h4 style="font-weight:800; font-size:0.85rem; color:#166534; margin-bottom:6px;">⚡ 가상 주식 주가 조절 & 주간 뉴스 즉시 발행</h4>
+              <h4 style="font-weight:800; font-size:0.85rem; color:#166534; margin-bottom:6px;">⚡ 가상 주식 주간 뉴스 즉시 발행</h4>
               <p style="font-size:0.75rem; color:#15803d; margin-bottom:8px;">선생님이 뉴스를 발행하면 4대 가상 기업 주가에 즉시 교육적 변동이 일어납니다.</p>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button onclick="applyPresetNews(0)" style="background:#059669; color:white; border:none; padding:6px 12px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.75rem;">
@@ -552,17 +561,20 @@
             </div>
 
             <!-- 학생 계정 관리 테이블 -->
-            <h4 style="font-weight:800; margin-bottom:8px;">👨‍🎓 전체 학생 자산 & 비밀번호 & 은행원 지정</h4>
-            <div style="overflow-x:auto; max-height:260px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <h4 style="font-weight:800; font-size:0.9rem;">👨‍🎓 전체 학생 자산 직접 변경 & 비밀번호 관리</h4>
+              <span style="font-size:0.72rem; color:#64748b;">💡 오이 금액을 직접 타이핑하여 변경하거나 +10/-10 버튼으로 지급/차감할 수 있습니다 (마이너스 가능).</span>
+            </div>
+            <div style="overflow-x:auto; max-height:280px;">
               <table class="clean-table">
                 <thead>
                   <tr>
                     <th>번호</th>
                     <th>학생명</th>
                     <th>개인PIN</th>
-                    <th>현금</th>
-                    <th>저금통</th>
-                    <th>투자</th>
+                    <th>👛 현금 (직접입력 / ±10)</th>
+                    <th>🐷 저금통</th>
+                    <th>📈 투자</th>
                     <th>은행원 여부</th>
                     <th>비번 리셋</th>
                   </tr>
