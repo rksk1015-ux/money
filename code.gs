@@ -5,12 +5,12 @@
  * ==============================================================================
  *
  * [선생님을 위한 설치 및 배포 3단계 안내]
- * 1. 새 구글 스프레드시트(Google Sheets)를 생성합니다. (예: "2026학년도 우리반 오이 머니 플래닛")
+ * 1. 구글 스프레드시트(Google Sheets)를 엽니다.
  * 2. 상단 메뉴 [확장 프로그램] -> [Apps Script]를 클릭합니다.
  * 3. 기존 코드를 모두 지우고 이 code.gs 파일의 전체 내용을 붙여넣은 뒤 [저장(Ctrl+S)]합니다.
  * 4. 우측 상단 파란색 [배포] -> [새 배포] 클릭:
  *    - 유형 선택: '웹 앱' (Web App)
- *    - 설명: '오이 머니 플래닛 v2'
+ *    - 설명: '오이 머니 플래닛 v3 (명단·잔액·주가 실시간 저장)'
  *    - 다음 사용자 권한으로 실행: '나(내 계정)'
  *    - 액세스 권한이 있는 사용자: '모든 사용자(Anyone)' (※ 학생 기기에서 로그인 없이 통신 필수!)
  * 5. 배포 완료 후 생성된 [웹 앱 URL]을 복사하여,
@@ -30,23 +30,23 @@ function doGet(e) {
   }
 
   try {
-    // 1. 학생 명단 시트 확인 및 로드
+    // 1. 학생 명단 시트 확인 및 로드 (번호, 이름, 현금, 저금통, 투자금, 역할, 은행원여부)
     var studentSheet = getOrCreateSheet(ss, '학생명단');
     var studentData = studentSheet.getDataRange().getValues();
     var students = [];
 
     if (studentData.length <= 1) {
-      // 초기 기본 학생 6명 등록
+      // 초기 기본 학생 6명 등록 (시트가 비어있을 때만 기본값 생성)
       var defaultStudents = [
-        [1, '김민준'],
-        [2, '이서연'],
-        [3, '박도윤'],
-        [4, '정지우'],
-        [5, '최예준'],
-        [6, '한수아']
+        [1, '김민준', 65, 80, 45, '은행원', '은행원'],
+        [2, '이서연', 50, 120, 30, '은행원', '은행원'],
+        [3, '박도윤', 40, 60, 70, '은행원', '은행원'],
+        [4, '정지우', 70, 50, 20, '칠판당번', '일반'],
+        [5, '최예준', 35, 90, 40, '급식도우미', '일반'],
+        [6, '한수아', 55, 75, 25, '환경미화', '일반']
       ];
       studentSheet.clear();
-      studentSheet.appendRow(['번호', '이름']);
+      studentSheet.appendRow(['번호', '이름', '현금(오이)', '저금통', '투자금', '현재역할', '은행원여부']);
       styleHeaderRow(studentSheet, '#2E7D32');
       defaultStudents.forEach(function(s) { studentSheet.appendRow(s); });
       studentData = studentSheet.getDataRange().getValues();
@@ -55,8 +55,23 @@ function doGet(e) {
     for (var i = 1; i < studentData.length; i++) {
       var num = parseInt(studentData[i][0], 10) || i;
       var name = String(studentData[i][1] || '').trim();
+      var cash = studentData[i][2] !== undefined && studentData[i][2] !== '' ? Number(studentData[i][2]) : 50;
+      var savings = studentData[i][3] !== undefined && studentData[i][3] !== '' ? Number(studentData[i][3]) : 0;
+      var invest = studentData[i][4] !== undefined && studentData[i][4] !== '' ? Number(studentData[i][4]) : 0;
+      var role = String(studentData[i][5] || '').trim();
+      var isTellerStr = String(studentData[i][6] || '').trim().toLowerCase();
+      var isTeller = isTellerStr === '은행원' || isTellerStr === 'true';
+
       if (name) {
-        students.push({ num: num, name: name });
+        students.push({
+          num: num,
+          name: name,
+          cash: cash,
+          savings: savings,
+          invest: invest,
+          role: role,
+          isTeller: isTeller
+        });
       }
     }
 
@@ -66,7 +81,6 @@ function doGet(e) {
     var roles = [];
 
     if (roleData.length <= 1) {
-      // 초기 기본 역할 등록
       var defaultRoles = [
         ['은행원', '학급 은행 창구 입출금 및 통장 거래 내역 관리'],
         ['칠판당번', '수업 후 칠판 닦기 및 분필·지우개 정리'],
@@ -90,7 +104,36 @@ function doGet(e) {
       }
     }
 
-    // 3. 배정 결과 히스토리 시트 확인 및 로드
+    // 3. 주가 정보 시트 로드
+    var stockSheet = getOrCreateSheet(ss, '주가정보');
+    var stockData = stockSheet.getDataRange().getValues();
+    var stocks = [];
+
+    if (stockData.length <= 1) {
+      var defaultStocks = [
+        ['semiconductor', '오이반도체', 20, 20],
+        ['hynix', 'sk오이닉스', 15, 15],
+        ['hyundai', '현대오이차', 10, 10],
+        ['pharma', '오이약품', 8, 8]
+      ];
+      stockSheet.clear();
+      stockSheet.appendRow(['종목ID', '종목명', '현재주가', '이전주가']);
+      styleHeaderRow(stockSheet, '#6A1B9A');
+      defaultStocks.forEach(function(st) { stockSheet.appendRow(st); });
+      stockData = stockSheet.getDataRange().getValues();
+    }
+
+    for (var sIdx = 1; sIdx < stockData.length; sIdx++) {
+      var sId = String(stockData[sIdx][0] || '').trim();
+      var sName = String(stockData[sIdx][1] || '').trim();
+      var sPrice = Number(stockData[sIdx][2]) || 0;
+      var sPrevPrice = Number(stockData[sIdx][3]) || sPrice;
+      if (sId && sName && sPrice > 0) {
+        stocks.push({ id: sId, name: sName, price: sPrice, prevPrice: sPrevPrice });
+      }
+    }
+
+    // 4. 배정 결과 히스토리 시트 확인 및 로드
     var resultsSheet = getOrCreateSheet(ss, '배정결과');
     var resData = resultsSheet.getDataRange().getValues();
     var results = [];
@@ -100,7 +143,7 @@ function doGet(e) {
       resultsSheet.appendRow(['배정일시', '번호', '학생이름', '배정역할', '역할설명']);
       styleHeaderRow(resultsSheet, '#D84315');
     } else {
-      // 최신 배정 결과 최대 50건 로드
+      // 최신 배정 결과 최대 100건 로드
       for (var k = 1; k < resData.length; k++) {
         var dateStr = String(resData[k][0] || '');
         var sNum = parseInt(resData[k][1], 10) || 0;
@@ -123,7 +166,8 @@ function doGet(e) {
       status: 'success',
       students: students,
       roles: roles,
-      results: results
+      results: results,
+      stocks: stocks
     };
 
     return ContentService.createTextOutput(JSON.stringify(outputResponse))
@@ -148,8 +192,69 @@ function doPost(e) {
     var action = payload.action;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 1. 배정 결과 저장 (action: "saveResults")
-    if (action === 'saveResults' && Array.isArray(payload.assignments)) {
+    // 1. 학생 명단 저장 (새 명단, 잔액, 역할 등 변경사항을 시트에 영구 보존)
+    if (Array.isArray(payload.students) && payload.students.length > 0) {
+      var studentSheet = getOrCreateSheet(ss, '학생명단');
+      studentSheet.clear();
+      studentSheet.appendRow(['번호', '이름', '현금(오이)', '저금통', '투자금', '현재역할', '은행원여부']);
+      styleHeaderRow(studentSheet, '#2E7D32');
+
+      payload.students.forEach(function(s) {
+        if (s && s.name) {
+          studentSheet.appendRow([
+            s.num || 0,
+            String(s.name || ''),
+            s.cash !== undefined ? s.cash : 50,
+            s.savings !== undefined ? s.savings : 0,
+            s.invest !== undefined ? s.invest : 0,
+            String(s.role || ''),
+            s.isTeller ? '은행원' : '일반'
+          ]);
+        }
+      });
+      studentSheet.autoResizeColumns(1, 7);
+    }
+
+    // 2. 역할 목록 저장
+    if (Array.isArray(payload.roles) && payload.roles.length > 0) {
+      var roleSheet = getOrCreateSheet(ss, '역할목록');
+      roleSheet.clear();
+      roleSheet.appendRow(['역할명', '설명']);
+      styleHeaderRow(roleSheet, '#1565C0');
+
+      payload.roles.forEach(function(r) {
+        if (r && r.role) {
+          roleSheet.appendRow([
+            String(r.role || ''),
+            String(r.desc || '')
+          ]);
+        }
+      });
+      roleSheet.autoResizeColumns(1, 2);
+    }
+
+    // 3. 주가 정보 저장 (선생님이 변경한 주가 보존)
+    if (Array.isArray(payload.stocks) && payload.stocks.length > 0) {
+      var stockSheet = getOrCreateSheet(ss, '주가정보');
+      stockSheet.clear();
+      stockSheet.appendRow(['종목ID', '종목명', '현재주가', '이전주가']);
+      styleHeaderRow(stockSheet, '#6A1B9A');
+
+      payload.stocks.forEach(function(st) {
+        if (st && st.name) {
+          stockSheet.appendRow([
+            String(st.id || ''),
+            String(st.name || ''),
+            Number(st.price) || 0,
+            Number(st.prevPrice) || 0
+          ]);
+        }
+      });
+      stockSheet.autoResizeColumns(1, 4);
+    }
+
+    // 4. 배정 결과 히스토리 추가
+    if (Array.isArray(payload.assignments) && payload.assignments.length > 0) {
       var resultsSheet = getOrCreateSheet(ss, '배정결과');
       if (resultsSheet.getLastRow() === 0) {
         resultsSheet.appendRow(['배정일시', '번호', '학생이름', '배정역할', '역할설명']);
@@ -170,29 +275,21 @@ function doPost(e) {
         }
       });
       resultsSheet.autoResizeColumns(1, 5);
-
-      return ContentService.createTextOutput(JSON.stringify({
-        status: 'success',
-        message: '배정 결과 ' + payload.assignments.length + '건이 구글 스프레드시트에 성공적으로 저장되었습니다.'
-      })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 2. 전체 경제 데이터 백업 (action: "SAVE_ALL_DATA")
-    if (action === 'SAVE_ALL_DATA' && payload.payload) {
-      var data = payload.payload;
-      var backupSheet = getOrCreateSheet(ss, '전체데이터_백업');
-      backupSheet.getRange(1, 1).setValue(JSON.stringify(data));
-      backupSheet.getRange(1, 2).setValue(new Date());
-
-      return ContentService.createTextOutput(JSON.stringify({
-        status: 'success',
-        message: '오이 머니 플래닛 전체 데이터가 백업되었습니다.'
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
+    // 5. 전체 JSON 백업 시트도 함께 보존
+    var backupSheet = getOrCreateSheet(ss, '전체데이터_백업');
+    backupSheet.getRange(1, 1).setValue(JSON.stringify({
+      savedAt: new Date().toISOString(),
+      studentCount: (payload.students || []).length,
+      roleCount: (payload.roles || []).length,
+      assignmentCount: (payload.assignments || []).length
+    }));
+    backupSheet.getRange(1, 2).setValue(new Date());
 
     return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',
-      message: '알 수 없는 action 요청입니다: ' + action
+      status: 'success',
+      message: '학생 명단, 역할, 주가 및 배정 결과가 구글 스프레드시트에 성공적으로 저장(동기화)되었습니다.'
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {

@@ -45,7 +45,7 @@
       <div class="header-actions">
         <button id="btn-header-settings" class="btn-head btn-sheet-url" onclick="openSheetUrlModal()">⚙️ 시트 URL 설정</button>
         <button id="btn-header-pull" class="btn-head btn-sheet-pull" onclick="fetchFromGoogleSheet()">🔄 시트에서 명단/결과 불러오기</button>
-        <button id="btn-header-push" class="btn-head btn-sheet-push" onclick="saveAssignmentsToGoogleSheet()">💾 배정 결과 구글 시트에 저장</button>
+        <button id="btn-header-push" class="btn-head btn-sheet-push" onclick="saveAssignmentsToGoogleSheet()">💾 시트에 변경내용 전체 저장</button>
         <button id="btn-header-teller" class="btn-head btn-bank" onclick="openBankModal()">🏦 은행 창구</button>
         <button id="btn-header-teacher" class="btn-head btn-teacher" onclick="openTeacherModal()">🛠️ 선생님 관리</button>
         <button id="btn-sound-toggle" class="btn-icon" onclick="toggleSound()" title="소리 켜기/끄기">🔊</button>
@@ -166,9 +166,10 @@
               <textarea id="edit-roles-text" rows="6" style="margin-top:4px; font-size:0.85rem;"></textarea>
             </div>
           </div>
-          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap;">
             <button onclick="document.getElementById('role-edit-box').style.display='none'" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:700;">취소</button>
-            <button onclick="saveEditRoles()" style="background:#059669; color:white; border:none; padding:6px 16px; border-radius:8px; cursor:pointer; font-weight:800;">저장 적용</button>
+            <button onclick="saveEditRoles()" style="background:#059669; color:white; border:none; padding:6px 16px; border-radius:8px; cursor:pointer; font-weight:800;">명단 수정 적용</button>
+            <button onclick="saveEditRoles(); syncAllToGoogleSheet();" style="background:#15803d; color:white; border:none; padding:6px 16px; border-radius:8px; cursor:pointer; font-weight:800;">💾 변경 명단 시트에 저장</button>
           </div>
         </div>
 
@@ -561,9 +562,14 @@
             </div>
 
             <!-- 학생 계정 관리 테이블 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <h4 style="font-weight:800; font-size:0.9rem;">👨‍🎓 전체 학생 자산 직접 변경 & 비밀번호 관리</h4>
-              <span style="font-size:0.72rem; color:#64748b;">💡 오이 금액을 직접 타이핑하여 변경하거나 +10/-10 버튼으로 지급/차감할 수 있습니다 (마이너스 가능).</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="font-weight:800; font-size:0.9rem;">👨‍🎓 전체 학생 자산 직접 변경 & 비밀번호 관리</h4>
+                <div style="font-size:0.72rem; color:#64748b;">💡 오이 금액을 직접 타이핑하여 변경하거나 +10/-10 버튼으로 지급/차감할 수 있습니다 (마이너스 가능).</div>
+              </div>
+              <button onclick="syncAllToGoogleSheet()" style="background:#15803d; color:white; border:none; padding:7px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:0.78rem; display:flex; align-items:center; gap:5px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                💾 변경된 명단·잔액·주가 시트에 저장
+              </button>
             </div>
             <div style="overflow-x:auto; max-height:280px;">
               <table class="clean-table">
